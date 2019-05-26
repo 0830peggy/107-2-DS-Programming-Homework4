@@ -159,18 +159,28 @@ df_validCommits$date
 
 ```{r ans110}
 # df_validCommits$weekday
+library(lubridate)
+lubridate::wday(df_validCommits$commitDate) -> df_validCommits$weekday
+df_validCommits$weekday <- as.integer(df_validCommits$weekday)
+df_validCommits$weekday
 ```
 
 ### 1.11 星期一到三且12-23
 在df_validCommits裡創立一個新的validCommit欄位，class為logical，其值為TRUE若commitDate落在星期一到三，小時在12到23間（含起迄）；最後一行請打df_validCommits$validCommit。
 ```{r ans111}
 # df_validCommits$validCommit
+trueweekday <- 1 <= df_validCommits$weekday & df_validCommits$weekday <= 3
+truehour <- 12 <= df_validCommits$hh & df_validCommits$hh <= 23
+df_validCommits$validCommit <- trueweekday==T & truehour==T
+df_validCommits$validCommit
 ```
 
 ### 1.12 取出合格條件子樣本
 取出df_validCommits中commitDate落在星期一到三，小時在12到23間（含起迄）的子樣本，存在data frame class的答案物件df_validCommitsSubsample中，最後一行打df_validCommitsSubsample。
 ```{r ans112}
 # df_validCommitsSubsample
+df_validCommitsSubsample <- df_validCommits[df_validCommits$validCommit==T,]
+df_validCommitsSubsample
 ```
 
 
@@ -179,6 +189,11 @@ df_validCommits$date
 
 ```{r ans113}
 # validCounts
+date(df_validCommitsSubsample$commitDate) -> count1
+as.factor(count1) -> count1
+levels(count1) -> count2
+validCounts <- as.integer(length(count2))
+validCounts
 ```
 
 ### 1.14 不重覆有效commit次數查詢函數
@@ -223,6 +238,29 @@ valid_commit_count <- function(username,reponame,wday,startHour,endHour){
 最後一行請打valid_commit_count。
 ```{r ans114}
 # valid_commit_count
+valid_commit_count <- function(username,reponame,wday,startHour,endHour){
+  commitHistory <- content(GET("https://github.com/username/reponame/commits/master"))
+  df_allCommits <- map_dfr(commitHistory,commit_df_fun)
+  df_allCommits$samePerson <- oneCommitRecord$commit$author$name == oneCommitRecord$commit$committer$name
+  df_validCommits <- df_allCommits[df_allCommits$samePerson==T,]
+  df_validCommits$commitDate <- ymd_hms(df_validCommits$commitDate,tz="UTC")
+df_validCommits$commitDate <- with_tz(df_validCommits$commitDate,tzone="Asia/Taipei")
+  df_validCommits$hh <- hour(df_validCommits$commitDate)
+df_validCommits$hh <- as.integer(df_validCommits$hh)
+  df_validCommits$date <- date(df_validCommits$commitDate)
+  lubridate::wday(df_validCommits$commitDate) -> df_validCommits$weekday
+df_validCommits$weekday <- as.integer(df_validCommits$weekday)
+  trueweekday <- wday <= df_validCommits$weekday & df_validCommits$weekday <= wday
+truehour <- startHour <= df_validCommits$hh & df_validCommits$hh <= endHour
+df_validCommits$validCommit <- trueweekday==T & truehour==T
+  df_validCommitsSubsample <- df_validCommits[df_validCommits$validCommit==T,]
+  date(df_validCommitsSubsample$commitDate) -> count1
+as.factor(count1) -> count1
+levels(count1) -> count2
+validCounts <- as.integer(length(count2))
+  return(validCounts)
+}
+valid_commit_count("0830peggy","107-2-inclass-practice",4,15,16)
 ```
 
 
