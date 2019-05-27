@@ -114,7 +114,7 @@ df_allCommits
 
 ```{r ans105}
 # df_allCommits$samePerson
-df_allCommits$samePerson <- oneCommitRecord$commit$author$name == oneCommitRecord$commit$committer$name
+df_allCommits$samePerson <- df_allCommits$author == df_allCommits$commiter
 df_allCommits$samePerson
 ```
 
@@ -189,8 +189,7 @@ df_validCommitsSubsample
 
 ```{r ans113}
 # validCounts
-date(df_validCommitsSubsample$commitDate) -> count1
-as.factor(count1) -> count1
+as.factor(df_validCommitsSubsample$date) -> count1
 levels(count1) -> count2
 validCounts <- as.integer(length(count2))
 validCounts
@@ -239,18 +238,19 @@ valid_commit_count <- function(username,reponame,wday,startHour,endHour){
 ```{r ans114}
 # valid_commit_count
 valid_commit_count <- function(username,reponame,wday,startHour,endHour){
+  
   str_replace_all("https://api.github.com/repos/r-hub/cranlogs/commits",
   c("r-hub"=username,
     "cranlogs"=reponame)) -> commitstep1
   commitHistory <- content(GET(commitstep1))
   
   df_allCommits <- map_dfr(commitHistory,commit_df_fun) # 1.4
-  df_allCommits$samePerson <- oneCommitRecord$commit$author$name == oneCommitRecord$commit$committer$name # 1.5
+  df_allCommits$samePerson <- df_allCommits$author == df_allCommits$commiter # 1.5
   df_validCommits <- df_allCommits[df_allCommits$samePerson==T,] # 1.6
-  df_validCommits$commitDate <- ymd_hms(df_validCommits$commitDate,tz="UTC") # 1.7
-df_validCommits$commitDate <- with_tz(df_validCommits$commitDate,tzone="Asia/Taipei") 
-  df_validCommits$hh <- hour(df_validCommits$commitDate) # 1.8
-df_validCommits$hh <- as.integer(df_validCommits$hh)
+  df_validCommits$commitDate <- ymd_hms(df_validCommits$commitDate,tz="UTC")
+df_validCommits$commitDate <- with_tz(df_validCommits$commitDate,tzone="Asia/Taipei") # 1.7 
+  df_validCommits$hh <- hour(df_validCommits$commitDate)
+df_validCommits$hh <- as.integer(df_validCommits$hh) # 1.8
   df_validCommits$date <- date(df_validCommits$commitDate) # 1.9
   lubridate::wday(df_validCommits$commitDate) -> df_validCommits$weekday
 df_validCommits$weekday <- as.integer(df_validCommits$weekday) # 1.10
@@ -258,10 +258,10 @@ df_validCommits$weekday <- as.integer(df_validCommits$weekday) # 1.10
 truehour <- startHour <= df_validCommits$hh & df_validCommits$hh <= endHour
 df_validCommits$validCommit <- trueweekday==T & truehour==T # 1.11
   df_validCommitsSubsample <- df_validCommits[df_validCommits$validCommit==T,] # 1.12
-  date(df_validCommitsSubsample$commitDate) -> count1
-as.factor(count1) -> count1
+  as.factor(df_validCommitsSubsample$date) -> count1
 levels(count1) -> count2
-validCounts <- as.integer(length(count2)) # 1.13
+validCounts <- as.integer(length(count2))
+validCounts # 1.13
   return(validCounts)
 }
 valid_commit_count
